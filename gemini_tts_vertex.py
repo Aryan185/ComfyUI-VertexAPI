@@ -1,9 +1,8 @@
 import os
-import struct
 import io
 import json
 import tempfile
-import torchaudio
+import torch
 from google.genai import Client, types
 
 class GeminiTTSVertexNode:
@@ -80,7 +79,6 @@ class GeminiTTSVertexNode:
         if not text.strip():
             raise ValueError("Text input cannot be empty.")
         
-        # Initialize Vertex AI client
         client = self.setup_client(service_account, project_id, location)
         
         # Build prompt
@@ -103,8 +101,8 @@ class GeminiTTSVertexNode:
         
         # Generate audio
         audio_data = b""
-        mime_type = None
         
+        # Collect raw PCM chunks
         for chunk in client.models.generate_content_stream(
             model=model,
             contents=contents,
@@ -116,26 +114,16 @@ class GeminiTTSVertexNode:
                 
                 inline_data = chunk.candidates[0].content.parts[0].inline_data
                 audio_data += inline_data.data
-                if mime_type is None:
-                    mime_type = inline_data.mime_type
         
         if not audio_data:
             raise ValueError("No audio data received from API.")
         
-        if mime_type and "L16" in mime_type:
-            header = struct.pack(
-                "<4sI4s4sIHHIIHH4sI",
-                b"RIFF", 36 + len(audio_data),
-                b"WAVE", b"fmt ", 16, 1, 1, 24000, 48000, 2, 16,
-                b"data", len(audio_data)
-            )
-            audio_data = header + audio_data
-        
-        # Decode audio from memory
-        audio_buffer = io.BytesIO(audio_data)
-        waveform, sample_rate = torchaudio.load(audio_buffer)
-        
-        # Return in ComfyUI audio format
+
+        waveform = torch.frombuffer(bytearray(audio_data), dtype=torch.int16)
+        waveform = waveform.to(torch.float32) / 32768.0
+        waveform = waveform.unsqueeze(0) 
+        sample_rate = 24000
+
         return ({"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate},)
     
     @classmethod
