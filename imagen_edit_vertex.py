@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 from google.genai.types import RawReferenceImage, MaskReferenceImage
 
-class GoogleImagenEditNode:
+class GoogleImagenEditVertex:
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -168,5 +168,5 @@ class GoogleImagenEditNode:
     def IS_CHANGED(cls, **kwargs):
         return f"{kwargs.get('prompt', '')}-{kwargs.get('negative_prompt', '')}-{kwargs.get('edit_mode', '')}-{kwargs.get('number_of_images', 1)}-{kwargs.get('seed', 12345)}-{kwargs.get('base_steps', 50)}"
 
-NODE_CLASS_MAPPINGS = {"GoogleImagenEditNode": GoogleImagenEditNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"GoogleImagenEditNode": "Imagen Edit (Vertex AI)"}
+NODE_CLASS_MAPPINGS = {"GoogleImagenEditVertex": GoogleImagenEditVertex}
+NODE_DISPLAY_NAME_MAPPINGS = {"GoogleImagenEditVertex": "Imagen Edit (Vertex AI)"}

@@ -41,6 +41,7 @@ class GeminiDiarisationNode:
             "optional": {
                 "thinking": ("BOOLEAN", {"default": False}),
                 "thinking_budget": ("INT", {"default": 0, "min": -1, "max": 24576, "step": 1}),
+                "audio_timestamp": ("BOOLEAN", {"default": False})
             }
         }
     
@@ -229,7 +230,7 @@ class GeminiDiarisationNode:
     
     def diarise(self, audio, project_id, location, service_account, model, 
                 seed, temperature, num_speakers,
-                thinking=False, thinking_budget=0):
+                thinking=False, thinking_budget=0, audio_timestamp=False):
         
         audio_data, sr = self.extract_audio_data(audio)
         audio_data = self.normalize_audio(audio_data)
@@ -244,7 +245,7 @@ class GeminiDiarisationNode:
         
         diarization_config = types.GenerateContentConfig(
             temperature=temperature,
-            audio_timestamp=True,
+            audio_timestamp=audio_timestamp,
         )
         
         if seed >= 0:

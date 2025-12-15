@@ -5,7 +5,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-class GoogleImagenNode:
+class GoogleImagenVertex:
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -107,5 +107,5 @@ class GoogleImagenNode:
     def IS_CHANGED(cls, **kwargs):
         return f"{kwargs.get('prompt', '')}-{kwargs.get('model', '')}-{kwargs.get('number_of_images', 1)}-{kwargs.get('aspect_ratio', '1:1')}-{kwargs.get('image_size', '1K')}"
 
-NODE_CLASS_MAPPINGS = {"GoogleImagenNode": GoogleImagenNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"GoogleImagenNode": "Google Imagen Generator"}
+NODE_CLASS_MAPPINGS = {"GoogleImagenVertex": GoogleImagenVertex}
+NODE_DISPLAY_NAME_MAPPINGS = {"GoogleImagenVertex": "Google Imagen (Vertex AI)"}
