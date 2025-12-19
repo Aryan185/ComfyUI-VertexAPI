@@ -1,22 +1,17 @@
-# ComfyUI-ExternalAPI-Helpers
+# ComfyUI-VertexAPI
 
-A collection of powerful custom nodes for ComfyUI that connect your local workflows to closed-source AI models via their APIs. Use Google's Gemini, Imagen, Veo, OpenAI's GPT-Image-1, and Black Forest Labs' FLUX models directly within ComfyUI.
-
-
+A collection of powerful custom nodes for ComfyUI that connect your local workflows to Google's Vertex AI models. Use Google's Gemini, Imagen, and Veo models directly within ComfyUI using your Google Cloud Vertex AI credentials.
 
 ## Key Features
 
-*   **FLUX Kontext Pro & Max:** Image-to-image transformations using the FLUX models via the Replicate API.
-*   **Gemini Chat:** Google's powerful multimodal AI. Ask questions about an image, generate detailed descriptions or create prompts for other models. Supports thinking budget controls for applicable models.
-*   **Gemini Segmentation:** Generate segmentation masks for objects in an image using Gemini.
-*   **GPT Image Edit:** OpenAI's `gpt-image-1` for prompt-based image editing and inpainting. Simply mask an area and describe the change you want to see.
-*   **Google Imagen Generator & Edit:** Create and edit images with Google's Imagen models, with support for Vertex AI.
-*   **Nano Banana:** A creative image generation node using a specialized Gemini model.
-*   **Veo Text-to-Video:** Generate high-quality video clips from text prompts using Google's Veo model via Vertex AI.
-*   **ElevenLabs TTS:** Generate high-quality speech from text using ElevenLabs' diverse range of voices and models.
-*   **Gemini TTS:** Create speech from text using Google's Gemini models.
-*   **Seamless Integration:** All nodes are designed to work seamlessly with standard ComfyUI inputs (IMAGE, MASK, STRING) and outputs, allowing you to chain them into complex and creative workflows.
-*   **Secure & Simple:** Simply provide your API key in the node's input field to get started.
+*   **Gemini Chat (Vertex AI):** Google's powerful multimodal AI via Vertex AI. Ask questions about an image, generate detailed descriptions, or create prompts for other models. Supports thinking budget controls.
+*   **Gemini Segmentation (Vertex AI):** Generate segmentation masks for objects in an image using Gemini on Vertex AI.
+*   **Google Imagen Edit (Vertex AI):** Perform advanced image editing, inpainting, outpainting, and background swapping using Imagen on Google's Vertex AI platform.
+*   **Google Imagen Generator (Vertex AI):** Create images with Google's Imagen models via Vertex AI.
+*   **Nano Banana (Vertex AI):** A creative image generation node using a specialized Gemini model on Vertex AI.
+*   **Veo Text-to-Video (Vertex AI):** Generate high-quality video clips from text prompts using Google's Veo model via Vertex AI.
+*   **Gemini TTS (Vertex AI):** Create speech from text using Google's Gemini models via Vertex AI.
+*   **Gemini Diarisation (Vertex AI):** Perform speaker diarization on audio files using Gemini on Vertex AI.
 
 ---
 
@@ -29,193 +24,140 @@ A collection of powerful custom nodes for ComfyUI that connect your local workfl
     ```
 3.  Clone this repository:
     ```bash
-    git clone https://github.com/Aryan185/ComfyUI-ExternalAPI-Helpers.git
+    git clone https://github.com/Aryan185/ComfyUI-VertexAPI.git
     ```
-
-4.  Install the required Python packages. Navigate into the newly cloned directory and use pip to install the dependencies:
+4.  Install the required Python packages:
     ```bash
-    cd ComfyUI-ExternalAPI-Helpers
+    cd ComfyUI-VertexAPI
     pip install -r requirements.txt
     ```
-5.  **Restart ComfyUI.** After restarting, you should find the new nodes in the "Add Node" menu.
+5.  **Restart ComfyUI.**
 
 ---
 
-## 🔑 Prerequisites: API Keys
+## 🔑 Prerequisites: Vertex AI Setup
 
-All nodes in this collection require API keys to function.
+Most nodes in this collection require Google Cloud Vertex AI credentials to function.
 
-*   **FLUX Nodes (Replicate):** You will need a [Replicate API Token](https://replicate.com/account/api-tokens).
-*   **Gemini, Imagen, Nano Banana, and Gemini TTS Nodes:** You will need a [Google AI Studio API Key](https://aistudio.google.com/app/api-keys).
-*   **GPT Image Edit Node:** You will need an [OpenAI API Key](https://platform.openai.com/api-keys).
-*   **ElevenLabs TTS Node:** You will need an [ElevenLabs API Key](https://elevenlabs.io/).
-*   **Vertex AI Nodes (Imagen Edit, Veo):** You will need a Google Cloud Project ID, a service account with appropriate permissions, and the location for the resources.
-
-You can paste your key directly into the `api_key` field on the corresponding node. For Vertex AI nodes, you will need to provide the project ID, location, and path to your service account JSON file.
+You will need:
+1.  **Google Cloud Project ID:** The ID of your Google Cloud project.
+2.  **Location:** The region where your resources are located (e.g., `us-central1`).
+3.  **Service Account JSON:** A path to your Google Cloud service account JSON key file. Ensure the service account has the necessary permissions (e.g., Vertex AI User).
 
 ---
 
 ## 📚 Node Guide
 
-### Flux Kontext Pro / Max
+### Gemini Chat (Vertex AI)
 
-These nodes allow you to transform an input image based on a text prompt. They are ideal for applying artistic styles or making significant conceptual changes to an existing image.
-
-*   **Category:** `image/edit`
-*   **Inputs:**
-    *   `image`: The source image to transform.
-    *   `prompt`: A text description of the desired output (e.g., "A vibrant Van Gogh painting", "Make this a 90s cartoon").
-    *   `replicate_api_token`: Your API token from Replicate.
-    *   `aspect_ratio`: The desired output aspect ratio. `match_input_image` is highly recommended to preserve the original composition.
-    *   `output_format`: `jpg` or `png`.
-    *   `safety_tolerance`: Adjust the content safety filter level.
-*   **Output:**
-    *   `image`: The generated image.
-
-### Gemini Chat
-
-A versatile node for text generation and image analysis. Use it to understand an image's content or to generate creative text for other nodes.
+A versatile node for text generation and image analysis using Vertex AI.
 
 *   **Category:** `text/generation`
 *   **Inputs:**
-    *   `prompt`: The text prompt or question you want to ask the model.
-    *   `image` (Optional): An input image for the model to analyze.
-    *   `api_key`: Your API key from Google AI Studio.
-    *   `model`: The Gemini model to use (e.g., `gemini-2.5-pro`).
-    *   `system_instruction` (Optional): Provide context or rules for how the model should behave.
-    *   `temperature`: Controls the creativity of the output. Higher is more creative.
-    *   `thinking`: Enables the model's thinking/reasoning process (Gemini 2.5 Pro).
-*   **Output:**
-    *   `response`: The text generated by the Gemini model.
-
-### Gemini Segmentation
-
-This node uses a Gemini model to generate segmentation masks for specified objects within an image.
-
-*   **Category:** `image/generation`
-*   **Inputs:**
-    *   `image`: The source image for segmentation.
-    *   `segment_prompt`: A text description of the objects to segment (e.g., "the car", "all people").
-    *   `api_key`: Your API key from Google AI Studio.
-    *   `model`: The Gemini model to use.
-    *   `...other_params`: Controls for temperature, thinking, and seed.
-*   **Output:**
-    *   `mask`: A black and white mask of the segmented objects.
-
-### GPT Image Edit
-
-This node uses OpenAI's API to perform powerful, prompt-based inpainting and editing.
-
-*   **Category:** `image/edit`
-*   **Inputs:**
-    *   `image`: The source image to edit.
-    *   `mask` (Optional): A black and white mask. The model will edit the **white area** of the mask.
-    *   `prompt`: A description of the edit to perform (e.g., "Add a small red boat on the water", "Remove the person on the left").
-    *   `api_key`: Your API key from OpenAI.
-    *   `...other_params`: Various quality and formatting options for the OpenAI API.
-*   **Output:**
-    *   `image`: The edited image.
-
-**Note:** If a mask is provided, the edits will be constrained to the masked region. If no mask is provided, the model will attempt to edit the entire image based on the prompt.
-
-### Google Imagen Generator
-
-Generate images from a text prompt using Google's Imagen models.
-
-*   **Category:** `image/generation`
-*   **Inputs:**
-    *   `prompt`: A text description of the image to generate.
-    *   `api_key`: Your API key from Google AI Studio.
-    *   `model`: The Imagen model to use.
-    *   `...other_params`: Options for number of images, aspect ratio, and image size.
-*   **Output:**
-    *   `images`: The generated image(s).
-
-### Google Imagen Edit (Vertex AI only)
-
-Perform advanced image editing, inpainting, outpainting, and background swapping using Imagen on Google's Vertex AI platform.
-
-*   **Category:** `image/edit`
-*   **Inputs:**
-    *   `image`: The source image to edit.
-    *   `mask`: A mask defining the area to edit.
-    *   `prompt`: A description of the desired edit.
+    *   `prompt`: The text prompt.
     *   `project_id`: Your Google Cloud Project ID.
-    *   `location`: The Google Cloud location for the model.
-    *   `service_account`: Path to your Google Cloud service account JSON file.
-    *   `edit_mode`: The type of edit to perform (e.g., inpainting, outpainting).
-    *   `...other_params`: Controls for negative prompt, seed, and steps.
+    *   `location`: Google Cloud location (default: `us-central1`).
+    *   `service_account`: Path to your service account JSON file.
+    *   `model`: The Gemini model to use (e.g., `gemini-2.5-pro`).
+    *   `image` (Optional): Input image for analysis.
+    *   `thinking`: Enable thinking process.
+    *   `thinking_budget`: Token budget for thinking.
+*   **Output:**
+    *   `response`: The generated text.
+
+### Gemini Segmentation (Vertex AI)
+
+Generate segmentation masks using Gemini on Vertex AI.
+
+*   **Category:** `image/generation`
+*   **Inputs:**
+    *   `image`: Source image.
+    *   `segment_prompt`: Description of objects to segment.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Gemini model to use.
+*   **Output:**
+    *   `mask`: Segmentation mask.
+
+### Google Imagen Edit (Vertex AI)
+
+Advanced image editing using Imagen on Vertex AI.
+
+*   **Category:** `image/edit`
+*   **Inputs:**
+    *   `image`: Source image.
+    *   `mask`: Mask defining the edit area.
+    *   `prompt`: Description of the edit.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `edit_mode`: Inpaint insertion, removal, outpainting, or background swap.
 *   **Output:**
     *   `edited_images`: The edited image(s).
 
-### Nano Banana
+### Google Imagen Generator (Vertex AI)
 
-A creative image generation node that can take a combination of text and up to five images as input.
+Generate images using Google's Imagen models via Vertex AI.
 
 *   **Category:** `image/generation`
 *   **Inputs:**
-    *   `api_key`: Your API key from Google AI Studio.
-    *   `prompt` (Optional): A text prompt.
-    *   `image_1` to `image_5` (Optional): Up to five source images.
-    *   `...other_params`: Controls for aspect ratio, temperature, top_p, and seed.
+    *   `prompt`: Image description.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Imagen model to use (e.g., `imagen-3.0-generate-001`).
+    *   `negative_prompt` (Optional): What to avoid in the image.
+    *   `aspect_ratio`, `image_size`, `guidance_scale`, `seed`: Generation controls.
 *   **Output:**
-    *   `image`: The generated image.
+    *   `images`: Generated image(s).
+
+### Nano Banana (Vertex AI)
+
+Creative image generation using Gemini on Vertex AI.
+
+*   **Category:** `image/generation`
+*   **Inputs:**
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Gemini model (e.g., `gemini-3-pro-image-preview`).
+    *   `prompt` (Optional): Text prompt.
+    *   `image_1` to `image_5` (Optional): Source images.
+*   **Output:**
+    *   `image`: Generated image.
 
 ### Veo Text-to-Video (Vertex AI)
 
-Generate short, high-quality video clips from a text description using Google's Veo model on Vertex AI.
+Generate video clips using Veo on Vertex AI.
 
 *   **Category:** `video/generation`
 *   **Inputs:**
-    *   `prompt`: A text description of the video to generate.
-    *   `project_id`: Your Google Cloud Project ID.
-    *   `location`: The Google Cloud location for the model.
-    *   `service_account`: Path to your Google Cloud service account JSON file.
-    *   `...other_params`: Controls for negative prompt, aspect ratio, audio generation, and seed.
+    *   `prompt`: Video description.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Veo model (e.g., `veo-2.0-generate-001`).
 *   **Output:**
-    *   `frames`: The generated video frames, output as an image batch.
+    *   `frames`: Generated video frames.
 
----
+### Gemini TTS (Vertex AI)
 
-### ElevenLabs TTS
-
-Generate speech from text using the ElevenLabs API.
+Generate speech from text using Gemini on Vertex AI.
 
 *   **Category:** `audio/generation`
 *   **Inputs:**
-    *   `text`: The text to convert to speech.
-    *   `api_key`: Your API key from ElevenLabs.
-    *   `voice_id`: The ID of the voice to use for generation.
-    *   `model_id`: The ElevenLabs model to use.
-    *   `output_format`: The desired output audio format.
-    *   `stability`: Controls the stability and variability of the generated speech.
-    *   `similarity_boost`: Enhances the similarity of the generated speech to the chosen voice.
-    *   `speed`: Adjusts the speaking rate.
-    *   `style`: Controls the expressiveness of the speech.
-    *   `use_speaker_boost`: A boolean to enable or disable speaker boost.
-    *   `seed`: A seed for ensuring reproducible results.
+    *   `text`: Text to convert to speech.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Gemini TTS model.
+    *   `voice_id`: Voice selection.
 *   **Output:**
-    *   `audio`: The generated audio waveform and sample rate.
+    *   `audio`: Generated audio.
 
-### Gemini TTS
+### Gemini Diarisation (Vertex AI)
 
-Generate speech from text using Google's Gemini TTS models.
+Speaker diarization using Gemini on Vertex AI.
 
-*   **Category:** `audio/generation`
+*   **Category:** `audio`
 *   **Inputs:**
-    *   `text`: The text to be converted into speech.
-    *   `api_key`: Your API key from Google AI Studio.
-    *   `model`: The specific Gemini model to use for generation.
-    *   `voice_id`: The prebuilt voice to use for the output.
-    *   `temperature`: Controls the randomness and creativity of the output.
-    *   `seed`: A seed for ensuring reproducible results.
-    *   `system_prompt` (Optional): A system-level instruction to guide the model's behavior.
+    *   `audio`: Input audio.
+    *   `num_speakers`: Number of speakers to detect.
+    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
+    *   `model`: Gemini model.
 *   **Output:**
-    *   `audio`: The generated audio waveform and sample rate.
-
+    *   `speaker_1` to `speaker_4`: Audio tracks for separated speakers.
 
 ##  Acknowledgements
 
-*   The [ComfyUI](https://github.com/comfyanonymous/ComfyUI) team for creating such a flexible and powerful platform.
-*   [Google](https://deepmind.google/technologies/gemini/), [OpenAI](https://openai.com/), and [Black Forest Labs](https://www.blackforestlabs.ai/) for developing these incredible models.
-*   [Replicate](https://replicate.com/) for providing easy API access to a wide range of models.
+*   The [ComfyUI](https://github.com/comfyanonymous/ComfyUI) team.
+*   Google for Vertex AI and the incredible Gemini, Imagen, and Veo models.
