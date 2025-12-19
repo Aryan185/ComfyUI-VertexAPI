@@ -29,7 +29,7 @@ Documentation = "https://github.com/Aryan185/ComfyUI-VertexAPI/wiki"
 "Bug Tracker" = "https://github.com/Aryan185/ComfyUI-VertexAPI/issues"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "aryyy18"
 DisplayName = "ComfyUI-VertexAPI"
 Icon = ""
 includes = [] 
