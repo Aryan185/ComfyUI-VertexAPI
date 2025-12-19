@@ -38,7 +38,8 @@ class GeminiChatVertexNode:
                     "gemini-2.5-pro",
                     "gemini-3-pro-preview",
                     "gemini-2.0-flash-lite",
-                    "gemini-2.0-flash"
+                    "gemini-2.0-flash", 
+                    "gemini-3-flash-preview"
                 ], {"default": "gemini-2.5-pro"}),
                 "temperature": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "thinking": ("BOOLEAN", {"default": True}),

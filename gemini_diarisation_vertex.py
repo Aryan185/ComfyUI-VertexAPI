@@ -34,7 +34,7 @@ class GeminiDiarisationNode:
                     "me-central1", "me-central2", "me-west1"
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3-pro-preview"],),
+                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3-pro-preview", "gemini-3-flash-preview"],),
                 "seed": ("INT", {"default": 69, "min": 0, "max": 2147483646, "step": 1}),
                 "temperature": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 2.0, "step": 0.1})
             },
