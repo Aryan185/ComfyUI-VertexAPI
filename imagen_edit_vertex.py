@@ -25,7 +25,7 @@ class GoogleImagenEditVertex:
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
                 "edit_mode": (["EDIT_MODE_INPAINT_INSERTION", "EDIT_MODE_INPAINT_REMOVAL", "EDIT_MODE_OUTPAINT", "EDIT_MODE_BGSWAP"], {"default": "EDIT_MODE_INPAINT_INSERTION"}),
                 "number_of_images": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
-                "seed": ("INT", {"default": 12345, "min": 1, "max": 4294967295, "step": 1}),
+                "seed": ("INT", {"default": 69, "min": 1, "max": 2147483646, "step": 1}),
                 "base_steps": ("INT", {"default": 50, "min": 10, "max": 100, "step": 1})
             }
         }
