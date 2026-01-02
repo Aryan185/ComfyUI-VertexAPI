@@ -4,13 +4,14 @@ import json
 import tempfile
 import numpy as np
 import torch
+import wave
 from PIL import Image
 from typing import Optional
 from google import genai
 from google.genai import types
 
 class GeminiChatVertexNode:
-    """ComfyUI Node for Gemini Chat via Vertex AI with optional image input"""
+    """ComfyUI Node for Gemini Chat via Vertex AI with optional image and audio input"""
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -49,6 +50,7 @@ class GeminiChatVertexNode:
                 "system_instruction": ("STRING", {"multiline": True, "default": ""}),
                 "thinking_budget": ("INT", {"default": -1, "min": -1, "max": 24576, "step": 1}),
                 "image": ("IMAGE",),
+                "audio": ("AUDIO",),
             }
         }
     
@@ -81,10 +83,41 @@ class GeminiChatVertexNode:
         
         return genai.Client(vertexai=True, project=project_id.strip(), location=location.strip())
     
+    def audio_to_bytes(self, audio):
+        """Convert audio input to WAV bytes"""
+        if isinstance(audio, dict):
+            audio_data = audio.get("waveform")
+            sr = audio.get("sample_rate", 44100)
+        elif isinstance(audio, (list, tuple)) and len(audio) >= 2:
+            audio_data, sr = audio[0], audio[1]
+        else:
+            raise ValueError(f"Invalid audio input format: {type(audio)}")
+        
+        if audio_data is None:
+            raise ValueError("Missing audio data")
+        
+        if isinstance(audio_data, torch.Tensor):
+            audio_data = audio_data.cpu().numpy()
+        
+        # Convert to WAV bytes
+        audio_data = np.squeeze(audio_data)
+        if audio_data.dtype in [np.float32, np.float64]:
+            audio_data = np.clip(audio_data, -1.0, 1.0)
+            audio_data = (audio_data * 32767).astype(np.int16)
+        
+        wav_buffer = io.BytesIO()
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(int(sr))
+            wav_file.writeframes(audio_data.tobytes())
+        
+        return wav_buffer.getvalue()
+    
     def generate(self, prompt: str, project_id: str, location: str, service_account: str,
                  model: str, temperature: float, thinking: bool, seed: int,
                  system_instruction: Optional[str] = None, thinking_budget: int = -1, 
-                 image: Optional[torch.Tensor] = None) -> tuple:   
+                 image: Optional[torch.Tensor] = None, audio: Optional[dict] = None) -> tuple:   
 
         # Initialize Vertex AI client
         client = self.setup_client(service_account, project_id, location)
@@ -101,6 +134,11 @@ class GeminiChatVertexNode:
             buffered = io.BytesIO()
             Image.fromarray(img_array).save(buffered, format="PNG")
             parts.append(types.Part.from_bytes(mime_type="image/png", data=buffered.getvalue()))
+        
+        # Handle audio input
+        if audio is not None:
+            audio_bytes = self.audio_to_bytes(audio)
+            parts.append(types.Part.from_bytes(mime_type="audio/wav", data=audio_bytes))
         
         model_lower = model.lower()
         
