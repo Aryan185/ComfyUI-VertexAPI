@@ -43,25 +43,21 @@ class GeminiTTSVertexNode:
     CATEGORY = "audio/generation"
     
     def setup_client(self, service_account_json, project_id, location):
-        """Setup Vertex AI client with service account JSON content"""
         if not service_account_json.strip():
             raise ValueError("Service account JSON content is required.")
         
         if not project_id.strip():
             raise ValueError("Project ID is required.")
         
-        # Validate and write JSON content to temporary file
         try:
-            json.loads(service_account_json)  # Validate JSON format
+            json.loads(service_account_json)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON content: {str(e)}")
         
-        # Create temporary file with JSON content
         temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         temp_file.write(service_account_json.strip())
         temp_file.close()
         
-        # Set credentials path
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_file.name
         
         return Client(
@@ -81,50 +77,43 @@ class GeminiTTSVertexNode:
         
         client = self.setup_client(service_account, project_id, location)
         
-        # Build prompt
-        prompt_text = text
+        final_prompt = text
         if system_prompt.strip():
-            prompt_text = system_prompt.strip() + ":\n\n\"" + text + "\""
-        
-        contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt_text)])]
+            final_prompt = f"{system_prompt.strip()}\n\n{text}"
+
+        speech_config = types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_id)
+            )
+        )
         
         config = types.GenerateContentConfig(
             temperature=temperature,
             seed=seed,
-            response_modalities=["audio"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_id)
-                )
-            ),
+            response_modalities=["AUDIO"],
+            speech_config=speech_config,
         )
         
-        # Generate audio
-        audio_data = b""
-        
-        # Collect raw PCM chunks
-        for chunk in client.models.generate_content_stream(
-            model=model,
-            contents=contents,
-            config=config
-        ):
-            if (chunk.candidates and chunk.candidates[0].content and 
-                chunk.candidates[0].content.parts and 
-                chunk.candidates[0].content.parts[0].inline_data):
-                
-                inline_data = chunk.candidates[0].content.parts[0].inline_data
-                audio_data += inline_data.data
-        
-        if not audio_data:
-            raise ValueError("No audio data received from API.")
-        
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=final_prompt,
+                config=config
+            )
+        except Exception as e:
+            raise RuntimeError(f"Gemini API Error: {str(e)}")
 
-        waveform = torch.frombuffer(bytearray(audio_data), dtype=torch.int16)
+        try:
+            inline_data = response.candidates[0].content.parts[0].inline_data
+            audio_bytes = inline_data.data
+        except (AttributeError, IndexError, TypeError):
+            raise ValueError("API returned a response, but it contained no audio data.")
+
+        waveform = torch.frombuffer(bytearray(audio_bytes), dtype=torch.int16)
         waveform = waveform.to(torch.float32) / 32768.0
-        waveform = waveform.unsqueeze(0) 
-        sample_rate = 24000
-
-        return ({"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate},)
+        waveform = waveform.unsqueeze(0).unsqueeze(0)
+        
+        return ({"waveform": waveform, "sample_rate": 24000},)
     
     @classmethod
     def IS_CHANGED(cls, **kwargs):

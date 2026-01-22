@@ -1,13 +1,30 @@
-from .gemini_node_vertex import NODE_CLASS_MAPPINGS as GEMINI_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as GEMINI_DISPLAY
-from .gemini_segment_vertex import NODE_CLASS_MAPPINGS as GEMINI_SEGMENT_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as GEMINI_SEGMENT_DISPLAY
-from .nano_banana_vertex import NODE_CLASS_MAPPINGS as NANO_BANANA_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as NANO_BANANA_DISPLAY
-from .gemini_tts_vertex import NODE_CLASS_MAPPINGS as GEMINI_TTS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as GEMINI_TTS_DISPLAY
-from .veo_vertex import NODE_CLASS_MAPPINGS as VEO_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as VEO_DISPLAY
-from .gemini_diarisation_vertex import NODE_CLASS_MAPPINGS as GEMINI_DIARISATION_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as GEMINI_DIARISATION_DISPLAY
-from .imagen_edit_vertex import NODE_CLASS_MAPPINGS as IMAGEN_EDIT_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as IMAGEN_EDIT_DISPLAY
-from .imagen_vertex import NODE_CLASS_MAPPINGS as IMAGEN_IMAGE_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as IMAGEN_IMAGE_DISPLAY
+from . import (
+    gemini_node_vertex,
+    gemini_segment_vertex,
+    nano_banana_vertex,
+    gemini_tts_vertex,
+    veo_vertex,
+    gemini_diarisation_vertex,
+    imagen_edit_vertex,
+    imagen_vertex,
+)
 
-NODE_CLASS_MAPPINGS = {**GEMINI_MAPPINGS, **IMAGEN_IMAGE_MAPPINGS, **IMAGEN_EDIT_MAPPINGS, **GEMINI_SEGMENT_MAPPINGS, **NANO_BANANA_MAPPINGS, **GEMINI_TTS_MAPPINGS, **VEO_MAPPINGS, **GEMINI_DIARISATION_MAPPINGS}
-NODE_DISPLAY_NAME_MAPPINGS = {**GEMINI_DISPLAY, **IMAGEN_IMAGE_DISPLAY, **IMAGEN_EDIT_DISPLAY, **GEMINI_SEGMENT_DISPLAY, **NANO_BANANA_DISPLAY, **GEMINI_TTS_DISPLAY, **VEO_DISPLAY, **GEMINI_DIARISATION_DISPLAY}
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
 
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
+modules = [
+    gemini_node_vertex,
+    gemini_segment_vertex,
+    nano_banana_vertex,
+    gemini_tts_vertex,
+    veo_vertex,
+    gemini_diarisation_vertex,
+    imagen_edit_vertex,
+    imagen_vertex,
+]
+
+for module in modules:
+    NODE_CLASS_MAPPINGS.update(getattr(module, "NODE_CLASS_MAPPINGS", {}))
+    NODE_DISPLAY_NAME_MAPPINGS.update(getattr(module, "NODE_DISPLAY_NAME_MAPPINGS", {}))
+
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

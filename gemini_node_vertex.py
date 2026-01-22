@@ -2,17 +2,14 @@ import os
 import io
 import json
 import tempfile
-import numpy as np
-import torch
 import wave
+import torch
+import numpy as np
 from PIL import Image
-from typing import Optional
 from google import genai
 from google.genai import types
 
 class GeminiChatVertexNode:
-    """ComfyUI Node for Gemini Chat via Vertex AI with optional image and audio input"""
-    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -60,113 +57,83 @@ class GeminiChatVertexNode:
     CATEGORY = "text/generation"
     
     def setup_client(self, service_account_json, project_id, location):
-        """Setup Vertex AI client with service account JSON content"""
         if not service_account_json.strip():
             raise ValueError("Service account JSON content is required.")
-        
         if not project_id.strip():
             raise ValueError("Project ID is required.")
         
-        # Validate and write JSON content to temporary file
         try:
-            json.loads(service_account_json)  # Validate JSON format
+            json.loads(service_account_json)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON content: {str(e)}")
         
-        # Create temporary file with JSON content
         temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         temp_file.write(service_account_json.strip())
-        temp_file.close()
+        temp_file.close() 
         
-        # Set credentials path
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_file.name
         
-        return genai.Client(vertexai=True, project=project_id.strip(), location=location.strip())
+        return genai.Client(
+            vertexai=True,
+            project=project_id.strip(),
+            location=location.strip(),
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(attempts=10, jitter=10)
+            )
+        )
     
-    def audio_to_bytes(self, audio):
-        """Convert audio input to WAV bytes"""
-        if isinstance(audio, dict):
-            audio_data = audio.get("waveform")
-            sr = audio.get("sample_rate", 44100)
-        elif isinstance(audio, (list, tuple)) and len(audio) >= 2:
-            audio_data, sr = audio[0], audio[1]
-        else:
-            raise ValueError(f"Invalid audio input format: {type(audio)}")
-        
-        if audio_data is None:
-            raise ValueError("Missing audio data")
-        
-        if isinstance(audio_data, torch.Tensor):
-            audio_data = audio_data.cpu().numpy()
-        
-        # Convert to WAV bytes
-        audio_data = np.squeeze(audio_data)
-        if audio_data.dtype in [np.float32, np.float64]:
-            audio_data = np.clip(audio_data, -1.0, 1.0)
-            audio_data = (audio_data * 32767).astype(np.int16)
-        
-        wav_buffer = io.BytesIO()
-        with wave.open(wav_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(int(sr))
-            wav_file.writeframes(audio_data.tobytes())
-        
-        return wav_buffer.getvalue()
-    
-    def generate(self, prompt: str, project_id: str, location: str, service_account: str,
-                 model: str, temperature: float, thinking: bool, seed: int,
-                 system_instruction: Optional[str] = None, thinking_budget: int = -1, 
-                 image: Optional[torch.Tensor] = None, audio: Optional[dict] = None) -> tuple:   
+    def generate(self, prompt, project_id, location, service_account, model, temperature, thinking, seed,
+                 system_instruction=None, thinking_budget=-1, image=None, audio=None):   
 
-        # Initialize Vertex AI client
         client = self.setup_client(service_account, project_id, location)
         parts = [types.Part.from_text(text=prompt)]
         
-        # Handle image input
         if image is not None:
-            img_array = image.cpu().numpy() if isinstance(image, torch.Tensor) else image
-            if len(img_array.shape) == 4:
-                img_array = img_array[0]
-            if img_array.dtype in [np.float32, np.float64]:
-                img_array = (img_array * 255).astype(np.uint8)
-            
-            buffered = io.BytesIO()
-            Image.fromarray(img_array).save(buffered, format="PNG")
-            parts.append(types.Part.from_bytes(mime_type="image/png", data=buffered.getvalue()))
+            arr = (image[0].cpu().numpy() * 255).astype(np.uint8)
+            buf = io.BytesIO()
+            Image.fromarray(arr).save(buf, format="PNG")
+            parts.append(types.Part.from_bytes(mime_type="image/png", data=buf.getvalue()))
         
-        # Handle audio input
         if audio is not None:
-            audio_bytes = self.audio_to_bytes(audio)
-            parts.append(types.Part.from_bytes(mime_type="audio/wav", data=audio_bytes))
+            wf = audio.get("waveform") if isinstance(audio, dict) else audio[0]
+            sr = audio.get("sample_rate", 44100) if isinstance(audio, dict) else audio[1]
+            
+            wf = wf.cpu().numpy() if isinstance(wf, torch.Tensor) else wf
+            if wf.ndim > 1: wf = wf.mean(axis=0) if wf.shape[0] > 1 else wf.squeeze()
+            wf_int16 = (np.clip(wf, -1, 1) * 32767).astype(np.int16)
+            
+            buf = io.BytesIO()
+            with wave.open(buf, 'wb') as w:
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+                w.writeframes(wf_int16.tobytes())
+            parts.append(types.Part.from_bytes(mime_type="audio/wav", data=buf.getvalue()))
         
         model_lower = model.lower()
-        
-        # Gemini 2.0 models don't support thinking at all
+        t_config = None
+
         if "gemini-2.0" in model_lower:
             print("Gemini-2.0 models do not support thinking - disabling thinking config")
-            final_thinking_budget = None
-        # Gemini Pro models (2.5-pro, 3-pro) cannot turn thinking off
-        elif "pro" in model_lower and ("2.5" in model_lower or "gemini-3" in model_lower):
-            print(f"{model} cannot have thinking turned off - thinking is always enabled")
-            final_thinking_budget = thinking_budget if thinking_budget != 0 else -1
-        # Flash models can toggle thinking on/off
-        elif not thinking:
-            final_thinking_budget = 0
         else:
-            final_thinking_budget = thinking_budget
-        
+            final_budget = 0 
+            
+            if not thinking:
+                if "gemini-2.5-pro" in model_lower or "gemini-3-pro-preview" in model_lower:
+                    print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
+                    final_budget = -1
+            else:
+                final_budget = thinking_budget
+                if ("gemini-2.5-pro" in model_lower or "gemini-3-pro-preview" in model_lower) and final_budget == 0:
+                    print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
+                    final_budget = -1
+            
+            t_config = types.ThinkingConfig(thinking_budget=final_budget)
+
         config = types.GenerateContentConfig(
             temperature=temperature,
             seed=seed,
-            response_mime_type="text/plain"
+            system_instruction=system_instruction.strip() if system_instruction else None,
+            thinking_config=t_config
         )
-        
-        if "gemini-2.0" not in model_lower:
-            config.thinking_config = types.ThinkingConfig(thinking_budget=final_thinking_budget)
-        
-        if system_instruction and system_instruction.strip():
-            config.system_instruction = [types.Part.from_text(text=system_instruction.strip())]
         
         response = client.models.generate_content(
             model=model,
@@ -175,13 +142,6 @@ class GeminiChatVertexNode:
         )
         
         return (response.text,)
-            
 
-# Node mappings
-NODE_CLASS_MAPPINGS = {
-    "GeminiChatVertexNode": GeminiChatVertexNode
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "GeminiChatVertexNode": "Gemini Chat (Vertex AI)"
-}
+NODE_CLASS_MAPPINGS = {"GeminiChatVertexNode": GeminiChatVertexNode}
+NODE_DISPLAY_NAME_MAPPINGS = {"GeminiChatVertexNode": "Gemini Chat (Vertex AI)"}
