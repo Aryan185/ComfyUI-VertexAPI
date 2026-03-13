@@ -29,7 +29,7 @@ class NanoBananaVertexNode:
                     "me-central1", "me-central2", "me-west1"
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-3-pro-image-preview", "gemini-2.5-flash-image"],),
+                "model": (["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-3.1-flash-image-preview"],),
                 "aspect_ratio": (["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"],),
                 "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
                 "temperature": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
