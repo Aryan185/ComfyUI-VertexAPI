@@ -25,13 +25,17 @@ class GeminiTTSVertexNode:
                     "me-central1", "me-central2", "me-west1"
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"],),
+                "model": (["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts", "gemini-3.1-flash-tts-preview"],),
                 "voice_id": (["Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Aoede", "Callirrhoe", "Autonoe", "Enceladus", "Iapetus", "Umbriel", "Algieba", "Despina", "Erinome", "Achernar", "Laomedeia", "Rasalgethi", "Algenib", "Achird", "Pulcherrima", "Gacrux", "Schedar", "Alnilam", "Sulafat", "Sadaltager", "Sadachbia", "Vindemiatrix", "Zubenelgenubi"],),
                 "seed": ("INT", {"default": 69, "min": -1, "max": 2147483646, "step": 1}),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01}),
             },
             "optional": {
-                "system_prompt": ("STRING", {"multiline": True, "default": ""}),
+                "style": (["None", "Vocal Smile", "Newscaster", "Whisper", "Empathetic", "Promo/Hype", "Deadpan"], {"default": "None"}),
+                "pace": (["None", "Natural", "Rapid Fire", "The Drift", "Staccato"], {"default": "None"}),
+                "accent": (["None", "Neutral", "American (Gen)", "American (Valley)", "American (South)", "British (RP)", "Transatlantic", "Australian"], {"default": "None"}),
+                "audio_profile": ("STRING", {"multiline": True, "default": ""}),
+                "scene": ("STRING", {"multiline": True, "default": ""}),
             }
         }
 
@@ -66,15 +70,33 @@ class GeminiTTSVertexNode:
             )
         )
 
-    def generate_speech(self, text, project_id, location, service_account, voice_id,
-                        temperature, model, seed, system_prompt=""):
+    def generate_speech(self, text, project_id, location, service_account, model, voice_id,
+                        temperature, seed, audio_profile="", style="None", pace="None", accent="None", scene=""):
 
         if not text.strip():
             raise ValueError("Text input cannot be empty.")
 
         client = self.setup_client(service_account, project_id, location)
 
-        final_prompt = f"{system_prompt.strip()}\n\n{text}" if system_prompt.strip() else text
+        director_parts = []
+        if style not in ("", "None"): director_parts.append(f"Style: {style}")
+        if pace not in ("", "None"): director_parts.append(f"Pace: {pace}")
+        if accent not in ("", "None"): director_parts.append(f"Accent: {accent}")
+
+        has_director = any([audio_profile.strip(), director_parts, scene.strip()])
+
+        if has_director:
+            sections = ["Read the following transcript based on the audio profile and director's note."]
+            if audio_profile.strip():
+                sections.append(f"# Audio Profile\n{audio_profile.strip()}")
+            if director_parts:
+                sections.append(f"# Director's note\n{'. '.join(director_parts)}.")
+            if scene.strip():
+                sections.append(f"## Scene:\n{scene.strip()}")
+            sections.append(f"## Transcript:\n{text.strip()}")
+            prompt = "\n\n".join(sections)
+        else:
+            prompt = f"## Transcript:\n{text.strip()}"
 
         config = types.GenerateContentConfig(
             temperature=temperature,
@@ -90,7 +112,7 @@ class GeminiTTSVertexNode:
         try:
             response = client.models.generate_content(
                 model=model,
-                contents=final_prompt,
+                contents=prompt,
                 config=config
             )
         except Exception as e:
@@ -109,7 +131,7 @@ class GeminiTTSVertexNode:
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
-        return f"{kwargs.get('text', '')}-{kwargs.get('voice_id', '')}-{kwargs.get('temperature', 1.0)}-{kwargs.get('model', '')}-{kwargs.get('seed', 69)}-{kwargs.get('system_prompt', '')}"
+        return f"{kwargs.get('text', '')}-{kwargs.get('voice_id', '')}-{kwargs.get('temperature', 1.0)}-{kwargs.get('model', '')}-{kwargs.get('seed', 69)}-{kwargs.get('audio_profile', '')}-{kwargs.get('style', '')}-{kwargs.get('pace', '')}-{kwargs.get('accent', '')}-{kwargs.get('scene', '')}"
 
 NODE_CLASS_MAPPINGS = {"GeminiTTSVertexNode": GeminiTTSVertexNode}
 NODE_DISPLAY_NAME_MAPPINGS = {"GeminiTTSVertexNode": "Gemini TTS (Vertex AI)"}
