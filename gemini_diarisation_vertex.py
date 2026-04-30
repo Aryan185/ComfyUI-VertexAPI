@@ -1,6 +1,5 @@
 import os
 import json
-import tempfile
 import io
 import re
 import wave
@@ -8,6 +7,7 @@ import torch
 import numpy as np
 from google import genai
 from google.genai import types
+from google.oauth2 import service_account
 
 class GeminiDiarisationNode:
     @classmethod
@@ -31,7 +31,7 @@ class GeminiDiarisationNode:
                     "me-central1", "me-central2", "me-west1"
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"], {"default": "gemini-2.5-flash"}),
+                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"], {"default": "gemini-2.5-flash"}),
                 "seed": ("INT", {"default": 69, "min": 0, "max": 2147483646, "step": 1}),
                 "temperature": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 2.0, "step": 0.1})
             },
@@ -54,20 +54,20 @@ class GeminiDiarisationNode:
             raise ValueError("Project ID is required.")
         
         try:
-            json.loads(service_account_json)
+            sa_info = json.loads(service_account_json)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON content: {str(e)}")
-        
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        temp_file.write(service_account_json.strip())
-        temp_file.close() 
-        
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_file.name
-        
+
+        credentials = service_account.Credentials.from_service_account_info(
+            sa_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+
         return genai.Client(
             vertexai=True,
             project=project_id.strip(),
             location=location.strip(),
+            credentials=credentials,
             http_options=types.HttpOptions(
                 retry_options=types.HttpRetryOptions(attempts=10, jitter=10)
             )
@@ -87,7 +87,9 @@ class GeminiDiarisationNode:
             return sum(float(x) * 60 ** i for i, x in enumerate(reversed(parts)))
         except: return 0.0
 
-    def diarise(self, audio, num_speakers, project_id, location, service_account, model, seed, temperature, thinking=False, thinking_budget=0, audio_timestamp=False):
+    def diarise(self, audio, num_speakers, project_id, location, service_account, model, seed, temperature,
+                thinking=False, thinking_budget=0, audio_timestamp=False):
+
         waveform = audio.get("waveform")
         sr = audio.get("sample_rate")
         
@@ -139,9 +141,12 @@ class GeminiDiarisationNode:
 
         *You must PASS this benchmark to be deployed*"""
 
-        config = types.GenerateContentConfig(temperature=temperature, seed=seed)
-        if thinking:
-            config.thinking_config = types.ThinkingConfig(include_thoughts=False, thinking_budget=thinking_budget)
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            seed=seed,
+            audio_timestamp=audio_timestamp if audio_timestamp else None,
+            thinking_config=types.ThinkingConfig(include_thoughts=False, thinking_budget=thinking_budget) if thinking else None
+        )
 
         response = client.models.generate_content(
             model=model,

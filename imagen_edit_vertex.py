@@ -1,16 +1,15 @@
-import os
-import json
-import tempfile
 import io
+import json
 import base64
 import torch
 import numpy as np
 from PIL import Image
 from google import genai
 from google.genai import types
+from google.oauth2 import service_account
 
 class GoogleImagenEditVertex:
-    
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -32,61 +31,68 @@ class GoogleImagenEditVertex:
                 "negative_prompt": ("STRING", {"multiline": True, "default": ""}),
             }
         }
-    
+
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("edited_images",)
     FUNCTION = "edit_image"
     CATEGORY = "image/edit"
-    
+
     def setup_client(self, service_account_json, project_id, location):
         if not service_account_json.strip():
             raise ValueError("Service account JSON content is required.")
         if not project_id.strip():
             raise ValueError("Project ID is required.")
-        
+
         try:
-            json.loads(service_account_json)
+            sa_info = json.loads(service_account_json)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON content: {str(e)}")
-        
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        temp_file.write(service_account_json.strip())
-        temp_file.close()
-        
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_file.name
-        
-        return genai.Client(vertexai=True, project=project_id.strip(), location=location.strip())
-    
-    def edit_image(self, image, mask, prompt, project_id, location, service_account, 
-                  edit_mode, number_of_images, seed, base_steps, guidance_scale, mask_dilation, negative_prompt=""):
-        
+
+        credentials = service_account.Credentials.from_service_account_info(
+            sa_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+
+        return genai.Client(
+            vertexai=True,
+            project=project_id.strip(),
+            location=location.strip(),
+            credentials=credentials,
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(attempts=10, jitter=10)
+            )
+        )
+
+    def edit_image(self, image, mask, prompt, project_id, location, service_account,
+                   edit_mode, number_of_images, seed, base_steps, guidance_scale, mask_dilation, negative_prompt=""):
+
         client = self.setup_client(service_account, project_id, location)
-        
+
+        def to_b64(img):
+            b = io.BytesIO()
+            img.save(b, format='PNG')
+            return base64.b64encode(b.getvalue()).decode('utf-8')
+
+        img_pil = Image.fromarray((image[0].cpu().numpy() * 255).astype(np.uint8))
+
+        mask_np = mask.cpu().numpy()
+        if mask_np.ndim == 3: mask_np = mask_np[0]
+        mask_pil = Image.fromarray((mask_np * 255).astype(np.uint8), mode='L')
+
+        config_dict = {
+            "edit_mode": edit_mode,
+            "number_of_images": number_of_images,
+            "base_steps": base_steps,
+            "seed": seed,
+            "guidance_scale": guidance_scale,
+            "output_mime_type": "image/jpeg",
+            "include_rai_reason": True,
+        }
+
+        if negative_prompt.strip():
+            config_dict["negative_prompt"] = negative_prompt.strip()
+
         try:
-            def to_b64(img):
-                b = io.BytesIO()
-                img.save(b, format='PNG')
-                return base64.b64encode(b.getvalue()).decode('utf-8')
-
-            img_pil = Image.fromarray((image[0].cpu().numpy() * 255).astype(np.uint8))
-            
-            mask_np = mask.cpu().numpy()
-            if mask_np.ndim == 3: mask_np = mask_np[0]
-            mask_pil = Image.fromarray((mask_np * 255).astype(np.uint8), mode='L')
-
-            config_dict = {
-                "edit_mode": edit_mode,
-                "number_of_images": number_of_images,
-                "base_steps": base_steps,
-                "seed": seed,
-                "guidance_scale": guidance_scale,
-                "output_mime_type": "image/jpeg",
-                "include_rai_reason": True,
-            }
-            
-            if negative_prompt.strip():
-                config_dict["negative_prompt"] = negative_prompt.strip()
-            
             response = client.models.edit_image(
                 model="imagen-3.0-capability-001",
                 prompt=prompt,
@@ -98,18 +104,17 @@ class GoogleImagenEditVertex:
                 config=types.EditImageConfig(**config_dict)
             )
 
-            if not response.generated_images: raise ValueError("No images generated")
+            if not response.generated_images:
+                raise ValueError("No images generated")
 
             output_tensors = []
             for item in response.generated_images:
-                img_bytes = item.image.image_bytes
-                res_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                res_img = Image.open(io.BytesIO(item.image.image_bytes)).convert("RGB")
                 output_tensors.append(torch.from_numpy(np.array(res_img).astype(np.float32) / 255.0))
-            
+
             return (torch.stack(output_tensors),)
 
         except Exception as e:
-            print(f"Google Imagen Edit Error: {e}")
             raise RuntimeError(f"Google Imagen Edit Error: {e}")
 
     @classmethod
