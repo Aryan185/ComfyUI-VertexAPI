@@ -27,9 +27,21 @@ class GeminiChatVertexNode:
                     "asia-northeast3", "asia-south1", "asia-south2", "asia-southeast1",
                     "asia-southeast2", "australia-southeast1", "australia-southeast2",
                     "me-central1", "me-central2", "me-west1"
-                ], {"default": "us-central1"}),
+                ], {"default": "global"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"], {"default": "gemini-2.5-flash"}),
+                "model": ([
+                    "gemini-3.6-flash", 
+                    "gemini-3.5-flash", 
+                    "gemini-3.5-flash-lite", 
+                    "gemini-3.1-pro-preview", 
+                    "gemini-3.1-flash-lite", 
+                    "gemini-3-flash-preview", 
+                    "gemini-2.5-flash", 
+                    "gemini-2.5-pro", 
+                    "gemini-2.5-flash-lite", 
+                    "gemini-flash-latest", 
+                    "gemini-flash-lite-latest"
+                ], {"default": "gemini-3.5-flash"}),
                 "temperature": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "top_p": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "thinking": ("BOOLEAN", {"default": True}),
@@ -107,20 +119,14 @@ class GeminiChatVertexNode:
         model_lower = model.lower()
         t_config = None
 
-        if "gemini-2.0" in model_lower:
-            print("Gemini-2.0 models do not support thinking - disabling thinking config")
-        else:
-            final_budget = 0
+        # Check if the chosen model is a Pro model (requires thinking configurations to run properly)
+        is_pro = "pro" in model_lower
 
-            if not thinking:
-                if "gemini-2.5-pro" in model_lower or "gemini-3.1-pro-preview" in model_lower:
-                    print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
-                    final_budget = -1
-            else:
-                final_budget = thinking_budget
-                if ("gemini-2.5-pro" in model_lower or "gemini-3.1-pro-preview" in model_lower) and final_budget == 0:
-                    print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
-                    final_budget = -1
+        if is_pro or thinking:
+            final_budget = thinking_budget if thinking else 0
+            if is_pro and final_budget == 0:
+                print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
+                final_budget = -1
             
             t_config = types.ThinkingConfig(thinking_budget=final_budget)
 

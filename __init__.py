@@ -1,6 +1,5 @@
 from . import (
     gemini_node_vertex,
-    gemini_segment_vertex,
     nano_banana_vertex,
     gemini_tts_vertex,
     veo_vertex,
@@ -14,7 +13,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {}
 
 modules = [
     gemini_node_vertex,
-    gemini_segment_vertex,
     nano_banana_vertex,
     gemini_tts_vertex,
     veo_vertex,

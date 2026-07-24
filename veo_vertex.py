@@ -31,15 +31,12 @@ class GoogleVeoVertexVideoGenerator:
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
                 "model": ([
-                    "veo-2.0-generate-001",
-                    "veo-2.0-generate-exp",
-                    "veo-2.0-generate-preview",
-                    "veo-3.0-generate-001",
-                    "veo-3.0-fast-generate-001",
                     "veo-3.1-generate-001",
                     "veo-3.1-fast-generate-001",
+                    "veo-3.1-generate-preview",
+                    "veo-3.1-fast-generate-preview",
                     "veo-3.1-lite-generate-preview"
-                ], {"default": "veo-3.0-generate-001"}),
+                ], {"default": "veo-3.1-generate-001"}),
                 "resolution": (["720p", "1080p"], {"default": "720p"}),
                 "aspect_ratio": (["16:9", "9:16"], {"default": "16:9"}),
                 "duration_seconds": ("INT", {"default": 4, "min": 4, "max": 8, "step": 1}),

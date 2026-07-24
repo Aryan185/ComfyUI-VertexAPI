@@ -5,7 +5,6 @@ A collection of powerful custom nodes for ComfyUI that connect your local workfl
 ## Key Features
 
 *   **Gemini Chat (Vertex AI):** Google's powerful multimodal AI via Vertex AI. Ask questions about an image, generate detailed descriptions, or create prompts for other models. Supports thinking budget controls.
-*   **Gemini Segmentation (Vertex AI):** Generate segmentation masks for objects in an image using Gemini on Vertex AI.
 *   **Google Imagen Edit (Vertex AI):** Perform advanced image editing, inpainting, outpainting, and background swapping using Imagen on Google's Vertex AI platform.
 *   **Google Imagen Generator (Vertex AI):** Create images with Google's Imagen models via Vertex AI.
 *   **Nano Banana (Vertex AI):** A creative image generation node using a specialized Gemini model on Vertex AI.
@@ -65,18 +64,6 @@ A versatile node for text generation and image analysis using Vertex AI.
 *   **Output:**
     *   `response`: The generated text.
 
-### Gemini Segmentation (Vertex AI)
-
-Generate segmentation masks using Gemini on Vertex AI.
-
-*   **Category:** `image/generation`
-*   **Inputs:**
-    *   `image`: Source image.
-    *   `segment_prompt`: Description of objects to segment.
-    *   `project_id`, `location`, `service_account`: Vertex AI credentials.
-    *   `model`: Gemini model to use.
-*   **Output:**
-    *   `mask`: Segmentation mask.
 
 ### Google Imagen Edit (Vertex AI)
 

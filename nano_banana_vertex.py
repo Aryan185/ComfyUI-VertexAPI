@@ -13,6 +13,7 @@ class NanoBananaVertexNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
+                "prompt": ("STRING", {"multiline": True, "default": ""}),
                 "project_id": ("STRING", {"multiline": False, "default": ""}),
                 "location": ([
                     "global", "us-central1", "us-east1", "us-east4", "us-east5", "us-south1",
@@ -28,16 +29,15 @@ class NanoBananaVertexNode:
                     "me-central1", "me-central2", "me-west1"
                 ], {"default": "us-central1"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-3.1-flash-image-preview"],),
+                "model": (["gemini-3-pro-image", "gemini-2.5-flash-image", "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image"],),
                 "aspect_ratio": (["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"],),
                 "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "top_p": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "temperature": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "top_p": ("FLOAT", {"default": 0.85, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "google_search": ("BOOLEAN", {"default": False}),
                 "seed": ("INT", {"default": 69, "min": -1, "max": 2147483646, "step": 1}),
             },
             "optional": {
-                "prompt": ("STRING", {"multiline": True, "default": ""}),
                 "system_instruction": ("STRING", {"multiline": True, "default": ""}),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
@@ -106,7 +106,7 @@ class NanoBananaVertexNode:
 
         tools = None
         if google_search:
-            if "gemini-2.5" in model:
+            if "gemini-2.5" in model or "gemini-3.1-flash-lite-image" in model:
                 print(f"Ignoring google_search: {model} does not support it.")
             else:
                 tools = [types.Tool(googleSearch=types.GoogleSearch())]

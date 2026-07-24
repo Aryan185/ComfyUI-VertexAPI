@@ -1,4 +1,3 @@
-import os
 import json
 import io
 import re
@@ -29,9 +28,21 @@ class GeminiDiarisationNode:
                     "asia-northeast3", "asia-south1", "asia-south2", "asia-southeast1", 
                     "asia-southeast2", "australia-southeast1", "australia-southeast2", 
                     "me-central1", "me-central2", "me-west1"
-                ], {"default": "us-central1"}),
+                ], {"default": "global"}),
                 "service_account": ("STRING", {"multiline": True, "default": ""}),
-                "model": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash", "gemini-2.0-flash-lite"], {"default": "gemini-2.5-flash"}),
+                "model": ([
+                    "gemini-3.6-flash", 
+                    "gemini-3.5-flash", 
+                    "gemini-3.5-flash-lite", 
+                    "gemini-3.1-pro-preview", 
+                    "gemini-3.1-flash-lite", 
+                    "gemini-3-flash-preview", 
+                    "gemini-2.5-flash", 
+                    "gemini-2.5-pro", 
+                    "gemini-2.5-flash-lite", 
+                    "gemini-flash-latest", 
+                    "gemini-flash-lite-latest"
+                ], {"default": "gemini-3.5-flash"}),
                 "seed": ("INT", {"default": 69, "min": 0, "max": 2147483646, "step": 1}),
                 "temperature": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 2.0, "step": 0.1})
             },
@@ -141,11 +152,24 @@ class GeminiDiarisationNode:
 
         *You must PASS this benchmark to be deployed*"""
 
+        model_lower = model.lower()
+        t_config = None
+
+        # Check if the chosen model is a Pro model (requires thinking configurations to run properly)
+        is_pro = "pro" in model_lower
+
+        if is_pro or thinking:
+            final_budget = thinking_budget if thinking else 0
+            if is_pro and final_budget == 0:
+                print("Pro models cannot have thinking turned off - defaulting thinking budget to -1")
+                final_budget = -1
+            t_config = types.ThinkingConfig(include_thoughts=False, thinking_budget=final_budget)
+
         config = types.GenerateContentConfig(
             temperature=temperature,
             seed=seed,
             audio_timestamp=audio_timestamp if audio_timestamp else None,
-            thinking_config=types.ThinkingConfig(include_thoughts=False, thinking_budget=thinking_budget) if thinking else None
+            thinking_config=t_config
         )
 
         response = client.models.generate_content(
